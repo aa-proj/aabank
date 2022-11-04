@@ -51,6 +51,9 @@ const commands = [{
       type: 6
     }
   ]
+}, {
+  name: 'rank',
+  description: '所持金ランキングを確認します。',
 },
   {
     name: 'send',
@@ -211,12 +214,20 @@ client.on('interactionCreate', async (interaction: Interaction) => {
       take: 10
     })
     await interaction.reply(await getTransactionText(userTransaction || []))
+  } else if (interaction.commandName === "rank") {
+    const userRepository = await connection?.getRepository(User)
+    const users = (await userRepository?.find())?.sort((a,b) => {return (a.amount < b.amount) ? 1 : -1})
+    let reply = []
+    for (const u of users || []) {
+      reply.push(`${await getNamefromID(u.discordId)}: ${u.amount}ああP `)
+    }
+    // console.log(reply)
+    await interaction.reply(`\`\`\`${reply.join("\n")}\`\`\``)
   }
 });
 
 async function getNamefromID(id: any) {
   let g = client.guilds.cache.get("606109479003750440");
-  // console.log(await (g?.members.fetch(id)))
   const member = await g?.members.fetch(id)
   let nickName = member.nickname?.replace("@", "＠");
   if (!nickName) nickName = member.displayName;
