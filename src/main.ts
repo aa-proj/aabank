@@ -223,6 +223,7 @@ client.on('interactionCreate', async (interaction: Interaction) => {
     }
     // console.log(reply)
     await interaction.reply(`\`\`\`${reply.join("\n")}\`\`\``)
+    setTimeout(() => interaction.deleteReply(), 10000)
   }
 });
 
