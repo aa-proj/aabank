@@ -94,30 +94,34 @@ const commands = [{
 
 const rest = new REST({version: '9'}).setToken(discord_token);
 
-(async () => {
+
+const {Client, Intents} = require('discord.js');
+const client = new Client({intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_MESSAGE_REACTIONS]});
+
+client.on('ready', async () => {
+  console.log(`Logged in as ${client.user.tag}!`);
+
+
   try {
     console.log('Started refreshing application (/) commands.');
 
     await rest.put(
-      Routes.applicationGuildCommands("885834421771567125", "606109479003750440"),
-      {body: commands},
+      Routes.applicationGuildCommands(client.user?.id, "606109479003750440"),
+      {body: commands.map(r => {r.name = process.env.CMD_PREFIX + r.name; return r})},
     );
 
     console.log('Successfully reloaded application (/) commands.');
   } catch (error) {
     console.error(error);
   }
-})();
-
-const {Client, Intents} = require('discord.js');
-const client = new Client({intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_MESSAGE_REACTIONS]});
-
-client.on('ready', () => {
-  console.log(`Logged in as ${client.user.tag}!`);
 });
 
 client.on('interactionCreate', async (interaction: Interaction) => {
   if (!interaction.isCommand()) return;
+
+  if(process.env.CMD_PREFIX) {
+    interaction.commandName = interaction.commandName.replace(process.env.CMD_PREFIX, "")
+  }
 
   if (interaction.commandName === 'balance') {
     const userId = interaction.options.get("user")?.user?.id || interaction.user.id
@@ -216,7 +220,9 @@ client.on('interactionCreate', async (interaction: Interaction) => {
     await interaction.reply(await getTransactionText(userTransaction || []))
   } else if (interaction.commandName === "rank") {
     const userRepository = await connection?.getRepository(User)
-    const users = (await userRepository?.find())?.sort((a,b) => {return (a.amount < b.amount) ? 1 : -1})
+    const users = (await userRepository?.find())?.sort((a, b) => {
+      return (a.amount < b.amount) ? 1 : -1
+    })
     let reply = []
     for (const u of users || []) {
       reply.push(`${await getNamefromID(u.discordId)}: ${u.amount}ああP `)
@@ -341,7 +347,6 @@ app.get("/:id", async function (req, res, next) {
     success: true,
     amount: user.amount
   })
-
 })
 
 client.login(discord_token);
