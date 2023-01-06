@@ -77,4 +77,52 @@ export const SLASH_COMMAND = [{
       }
     ]
   },
+  {
+    name: 'seikyu',
+    description: 'ユーザにああPを請求します。',
+    options: [
+      {
+        name: "user",
+        required: true,
+        description: "請求先ユーザ",
+        type: 6
+      },
+      {
+        name: "amount",
+        required: true,
+        description: "量",
+        type: 4
+      },
+      {
+        name: "memo",
+        required: false,
+        description: "取引のメモ",
+        type: 3
+      }
+    ]
+  },
+  {
+    name: 'request',
+    description: 'ユーザにああPを請求します。',
+    options: [
+      {
+        name: "user",
+        required: true,
+        description: "請求先ユーザ",
+        type: 6
+      },
+      {
+        name: "amount",
+        required: true,
+        description: "量",
+        type: 4
+      },
+      {
+        name: "memo",
+        required: false,
+        description: "取引のメモ",
+        type: 3
+      }
+    ]
+  },
   ];
