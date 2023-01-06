@@ -31,17 +31,32 @@ export async function sendAAP(fromUserId: string, toUserId: string, amount: numb
   if (toUserId === "") {
     return SEND_RESULT.USERID_IS_EMPTY
   }
+
   if (toUserId === fromUserId) {
     return SEND_RESULT.FROM_TO_SAME
   }
+
   const toUser = await userCheckInit(toUserId)
   const fromUser = await userCheckInit(fromUserId)
+
   if (!toUser || !fromUser) {
     return SEND_RESULT.UNKNOWN
   }
+  // ああ銀行からの生成
+  if(fromUserId === "885834421771567125") {
+    toUser.amount += amount
+    const transaction = await transactionRepository?.create({
+      fromUser, toUser, amount: Number(amount), timestamp: new Date(), memo: memo
+    })
+    await userRepository?.save(toUser)
+    await transactionRepository?.save(<Transaction>transaction)
+    return SEND_RESULT.SUCCESS
+  }
+
   if (amount <= 0) {
     return SEND_RESULT.INVALID_AMOUNT
   }
+
   if (fromUser.amount < amount) {
     return SEND_RESULT.NOT_ENOUGH_MONEY
   }
