@@ -5,10 +5,10 @@ import {Transaction} from "./entity/transaction";
 import {userCheckInit} from "./lib";
 
 import "./api"
+import {AA_GUILD_ID, SLASH_COMMAND} from "./constant";
 
 
 const discord_token = process.env.AABANK_TOKEN
-export const AA_GUILD_ID = "606109479003750440"
 
 if (!discord_token) {
   throw new Error("TOKEN_NOT_PROVIDED")
@@ -40,58 +40,7 @@ async function connectDB() {
 // コネクションする
 connectDB();
 
-const commands = [{
-  name: 'balance',
-  description: '所持金を確認します。ユーザをつけるとそのユーザの所持金が見れます',
-  options: [
-    {
-      name: "user",
-      required: false,
-      description: "ユーザ",
-      type: 6
-    }
-  ]
-}, {
-  name: 'rank',
-  description: '所持金ランキングを確認します。',
-},
-  {
-    name: 'send',
-    description: '自分の所持金からユーザに対してお金を送金します',
-    options: [
-      {
-        name: "user",
-        required: true,
-        description: "ユーザ",
-        type: 6
-      },
-      {
-        name: "amount",
-        required: true,
-        description: "量",
-        type: 4
-      },
-      {
-        name: "memo",
-        required: false,
-        description: "取引のメモ",
-        type: 3
-      }
-    ]
-  },
-  {
-    name: 'transaction',
 
-    description: 'ユーザの送金履歴を見ます。ユーザをつけるとそのユーザの送金履歴が見れます',
-    options: [
-      {
-        name: "user",
-        required: false,
-        description: "ユーザ",
-        type: 6
-      }
-    ]
-  }];
 
 const rest = new REST({version: '9'}).setToken(discord_token);
 
@@ -109,7 +58,7 @@ client.on('ready', async () => {
       Routes.applicationGuildCommands(client.user?.id, AA_GUILD_ID),
       // デバッグ用の環境変数が設定されていた時にcommandを前処理
       {
-        body: commands.map(r => {
+        body: SLASH_COMMAND.map(r => {
           r.name = process.env.CMD_PREFIX + r.name;
           return r
         })

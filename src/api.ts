@@ -1,8 +1,9 @@
 import express from "express"
 import {User} from "./entity/user";
 import {Transaction} from "./entity/transaction";
-import {AA_GUILD_ID, client, connection} from "./main";
+import {client, connection} from "./main";
 import {userCheckInit} from "./lib";
+import {AA_GUILD_ID} from "./constant";
 
 const app = express()
 app.use(express.json())
