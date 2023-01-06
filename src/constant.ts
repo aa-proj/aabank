@@ -42,7 +42,6 @@ export const SLASH_COMMAND = [{
   },
   {
     name: 'transaction',
-
     description: 'ユーザの送金履歴を見ます。ユーザをつけるとそのユーザの送金履歴が見れます',
     options: [
       {
@@ -52,4 +51,30 @@ export const SLASH_COMMAND = [{
         type: 6
       }
     ]
-  }];
+  },
+
+  {
+    name: 'harae',
+    description: 'ユーザにああPを請求します。',
+    options: [
+      {
+        name: "user",
+        required: true,
+        description: "請求先ユーザ",
+        type: 6
+      },
+      {
+        name: "amount",
+        required: true,
+        description: "量",
+        type: 4
+      },
+      {
+        name: "memo",
+        required: false,
+        description: "取引のメモ",
+        type: 3
+      }
+    ]
+  },
+  ];

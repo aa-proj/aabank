@@ -161,6 +161,30 @@ client.on('interactionCreate', async (interaction: Interaction) => {
     setTimeout(() => interaction.deleteReply(), 10000)
   }
 
+  if(interaction.commandName === "harae") {
+    const toUserId = interaction.options.get("user")?.user?.id || ""
+    const fromUserId = interaction.user.id
+    const amount = Number(interaction.options.get("amount")?.value) || 0
+    interaction.channel?.send(`<@${fromUserId}> さんが <@${toUserId}> さんに ${amount} ああポイント請求しました。`)
+
+    // const action = new ActionRowBuilder()
+    //   .addComponents([
+    //       new ButtonBuilder()
+    //         .setCustomId("Neru")
+    //         .setLabel("寝る")
+    //         .setStyle(ButtonStyle.Success)
+    //         .setEmoji(neruEmojiID)
+    //       ,
+    //       new ButtonBuilder()
+    //         .setCustomId("Okiru")
+    //         .setLabel("起きる")
+    //         .setStyle(ButtonStyle.Primary)
+    //         .setEmoji(okiruEmojiID)
+    //     ]
+    //   );
+    // // @ts-ignore
+    // await channel.send({content: "このメッセージにリアクションしてね(⋈◍＞◡＜◍)。✧♡", components: [action]});
+  }
 });
 
 async function getNamefromID(id: any) {
