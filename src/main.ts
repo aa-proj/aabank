@@ -12,6 +12,7 @@ const server = app.listen(9989, function () {
 })
 
 const discord_token = process.env.AABANK_TOKEN
+export const AA_GUILD_ID = "606109479003750440"
 
 if (!discord_token) {
   throw new Error("TOKEN_NOT_PROVIDED")
@@ -106,7 +107,7 @@ client.on('ready', async () => {
     console.log('Started refreshing application (/) commands.');
 
     await rest.put(
-      Routes.applicationGuildCommands(client.user?.id, "606109479003750440"),
+      Routes.applicationGuildCommands(client.user?.id, AA_GUILD_ID),
       {body: commands.map(r => {r.name = process.env.CMD_PREFIX + r.name; return r})},
     );
 
@@ -234,7 +235,7 @@ client.on('interactionCreate', async (interaction: Interaction) => {
 });
 
 async function getNamefromID(id: any) {
-  let g = client.guilds.cache.get("606109479003750440");
+  let g = client.guilds.cache.get(AA_GUILD_ID);
   const member = await g?.members.fetch(id)
   let nickName = member.nickname?.replace("@", "＠");
   if (!nickName) nickName = member.displayName;
@@ -242,7 +243,7 @@ async function getNamefromID(id: any) {
 }
 
 async function getTagFromId(id: any) {
-  let g = client.guilds.cache.get("606109479003750440");
+  let g = client.guilds.cache.get(AA_GUILD_ID);
   // console.log(await (g?.members.fetch(id)))
   const member = await g?.members.fetch(id)
   return member.user.username + "#" + member.user.discriminator;
@@ -281,7 +282,7 @@ app.post("/", async function (req, res, next) {
     return
   }
 
-  let g = client.guilds.cache.get("606109479003750440");
+  let g = client.guilds.cache.get(AA_GUILD_ID);
 
   if (request.fromId === "885834421771567125") {
     // 国営銀行からの送金
