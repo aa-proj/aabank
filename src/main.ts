@@ -2,14 +2,10 @@ import {BaseCommandInteraction, Interaction, Message} from "discord.js";
 import {Connection, ConnectionOptions, createConnection} from "typeorm";
 import {User} from "./entity/user";
 import {Transaction} from "./entity/transaction";
+import {userCheckInit} from "./lib";
 
-import express from "express"
+import "./api"
 
-const app = express()
-app.use(express.json())
-const server = app.listen(9989, function () {
-  console.log("web server OK")
-})
 
 const discord_token = process.env.AABANK_TOKEN
 export const AA_GUILD_ID = "606109479003750440"
@@ -29,10 +25,13 @@ const options: ConnectionOptions = {
 };
 
 // TypeORMのコネクション 使う前にnullチェックが必要
-let connection: Connection | null = null;
+export let connection: Connection | null = null;
 
 async function connectDB() {
   connection = await createConnection(options);
+
+  // なんかこれをしないとSyncできなかったけど、あんまりSyncするのは良くない（データが飛ぶ)
+  // 対策: マイグレーションファイルをきちんと生成する
   await connection.query("PRAGMA foreign_keys=OFF");
   await connection.synchronize();
   await connection.query("PRAGMA foreign_keys=ON");
@@ -82,6 +81,7 @@ const commands = [{
   },
   {
     name: 'transaction',
+
     description: 'ユーザの送金履歴を見ます。ユーザをつけるとそのユーザの送金履歴が見れます',
     options: [
       {
@@ -95,20 +95,25 @@ const commands = [{
 
 const rest = new REST({version: '9'}).setToken(discord_token);
 
-
 const {Client, Intents} = require('discord.js');
-const client = new Client({intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_MESSAGE_REACTIONS]});
+export const client = new Client({intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_MESSAGE_REACTIONS]});
 
 client.on('ready', async () => {
   console.log(`Logged in as ${client.user.tag}!`);
 
-
+  // Slash Commandの登録
   try {
     console.log('Started refreshing application (/) commands.');
 
     await rest.put(
       Routes.applicationGuildCommands(client.user?.id, AA_GUILD_ID),
-      {body: commands.map(r => {r.name = process.env.CMD_PREFIX + r.name; return r})},
+      // デバッグ用の環境変数が設定されていた時にcommandを前処理
+      {
+        body: commands.map(r => {
+          r.name = process.env.CMD_PREFIX + r.name;
+          return r
+        })
+      },
     );
 
     console.log('Successfully reloaded application (/) commands.');
@@ -120,17 +125,25 @@ client.on('ready', async () => {
 client.on('interactionCreate', async (interaction: Interaction) => {
   if (!interaction.isCommand()) return;
 
-  if(process.env.CMD_PREFIX) {
+  // デバッグ用の環境変数が設定されていた時にcommandを前処理
+  if (process.env.CMD_PREFIX) {
     interaction.commandName = interaction.commandName.replace(process.env.CMD_PREFIX, "")
   }
 
+
+  const userRepository = await connection?.getRepository(User)
+  const transactionRepository = await connection?.getRepository(Transaction)
+
+  // 残高確認
   if (interaction.commandName === 'balance') {
     const userId = interaction.options.get("user")?.user?.id || interaction.user.id
     const user = await userCheckInit(userId)
     if (!user) {
+      // ここには来ないはず
       await interaction.reply("エラー　ますだくんにれんらくしてね (balance ユーザ初期化)")
       return
     }
+
     const i: BaseCommandInteraction = interaction
     i.reply({content: `<@${userId}> さんのああポイント残高 : ${user.amount}`, fetchReply: true}).then((r) => {
       setTimeout(() => {
@@ -140,7 +153,11 @@ client.on('interactionCreate', async (interaction: Interaction) => {
       }, 10000)
 
     });
-  } else if (interaction.commandName === "send") {
+    return
+  }
+
+  // 送金
+  if (interaction.commandName === "send") {
     const toUserId = interaction.options.get("user")?.user?.id || ""
     const fromUserId = interaction.user.id
     const amount = Number(interaction.options.get("amount")?.value) || 0
@@ -196,22 +213,20 @@ client.on('interactionCreate', async (interaction: Interaction) => {
       return
     }
 
-    const userRepository = await connection?.getRepository(User)
     fromUser.amount -= amount
     toUser.amount += amount
     await userRepository?.save(fromUser)
     await userRepository?.save(toUser)
     await interaction.reply(`<@${fromUserId}> さんが <@${toUserId}> さんに ${amount} ああポイント送金しました。`)
-    const transactionRepository = await connection?.getRepository(Transaction)
     const transaction = await transactionRepository?.create({
       fromUser, toUser, amount, timestamp: new Date(), memo
     })
     await transactionRepository?.save(<Transaction>transaction)
+  }
 
-  } else if (interaction.commandName === "transaction") {
+  if (interaction.commandName === "transaction") {
     const userId = interaction.options.get("user")?.user?.id || interaction.user.id
     const user = await userCheckInit(userId)
-    const transactionRepository = await connection?.getRepository(Transaction)
     const userTransaction = await transactionRepository?.find({
       where: [{toUser: user}, {fromUser: user}],
       relations: ["fromUser", "toUser"],
@@ -219,8 +234,9 @@ client.on('interactionCreate', async (interaction: Interaction) => {
       take: 10
     })
     await interaction.reply(await getTransactionText(userTransaction || []))
-  } else if (interaction.commandName === "rank") {
-    const userRepository = await connection?.getRepository(User)
+  }
+
+  if (interaction.commandName === "rank") {
     const users = (await userRepository?.find())?.sort((a, b) => {
       return (a.amount < b.amount) ? 1 : -1
     })
@@ -232,6 +248,7 @@ client.on('interactionCreate', async (interaction: Interaction) => {
     await interaction.reply(`\`\`\`${reply.join("\n")}\`\`\``)
     setTimeout(() => interaction.deleteReply(), 10000)
   }
+
 });
 
 async function getNamefromID(id: any) {
@@ -244,7 +261,6 @@ async function getNamefromID(id: any) {
 
 async function getTagFromId(id: any) {
   let g = client.guilds.cache.get(AA_GUILD_ID);
-  // console.log(await (g?.members.fetch(id)))
   const member = await g?.members.fetch(id)
   return member.user.username + "#" + member.user.discriminator;
 }
@@ -261,93 +277,5 @@ async function getTransactionText(transaction: Transaction[] | null): Promise<st
   return tmp.join("\n")
 }
 
-async function userCheckInit(userId: string) {
-  const userRepository = await connection?.getRepository(User);
-  const user = await userRepository?.findOne({discordId: userId})
-  if (!user) {
-    // 未登録
-    console.log("new user" + userId)
-    const newUser = await userRepository?.create({discordId: userId, amount: 0})
-    await userRepository?.save(<User>newUser)
-    return newUser
-  }
-  return user
-}
-
-
-app.post("/", async function (req, res, next) {
-  const request = req.body
-  if (!request.fromId || !request.toId || !request.amount) {
-    res.json({success: false, message: "bad request"})
-    return
-  }
-
-  let g = client.guilds.cache.get(AA_GUILD_ID);
-
-  if (request.fromId === "885834421771567125") {
-    // 国営銀行からの送金
-    const to = await userCheckInit(request.toId)
-    const from = await userCheckInit(request.fromId)
-    const fromUser = await g?.members.fetch(request.fromId)
-    const toUser = await g?.members.fetch(request.toId)
-    const userRepository = await connection?.getRepository(User)
-    if (!to || !from) {
-      // await interaction.reply("エラー ますだくんにれんらくしてね (send ユーザ初期化)")
-      return
-    }
-    to.amount += request.amount
-    await userRepository?.save(to)
-
-    const transactionRepository = await connection?.getRepository(Transaction)
-    const transaction = await transactionRepository?.create({
-      fromUser: from, toUser: to, amount: Number(request.amount), timestamp: new Date(), memo: request.memo
-    })
-    await transactionRepository?.save(<Transaction>transaction)
-    res.json({success: true})
-    return
-  } else {
-    // 普通の送金
-    const to = await userCheckInit(request.toId)
-    const from = await userCheckInit(request.fromId)
-    const userRepository = await connection?.getRepository(User)
-    if (!to || !from) {
-      // await interaction.reply("エラー ますだくんにれんらくしてね (send ユーザ初期化)")
-      res.json({success: false, message: "internal"})
-      return
-    }
-    if (from.amount < request.amount) {
-      res.json({success: false, message: "not_enough_money"})
-      return
-    }
-    from.amount -= request.amount
-    to.amount += request.amount
-    await userRepository?.save(to)
-    await userRepository?.save(from)
-
-    const transactionRepository = await connection?.getRepository(Transaction)
-    const transaction = await transactionRepository?.create({
-      fromUser: from, toUser: to, amount: Number(request.amount), timestamp: new Date(), memo: request.memo
-    })
-    await transactionRepository?.save(<Transaction>transaction)
-    res.json({success: true})
-    return
-  }
-});
-
-app.get("/:id", async function (req, res, next) {
-  const userRepository = await connection?.getRepository(User)
-  const user = await userRepository?.findOne({where: {discordId: req.params.id}})
-  if (!user) {
-    res.json({
-      success: false,
-      message: "user_not_found"
-    })
-    return
-  }
-  res.json({
-    success: true,
-    amount: user.amount
-  })
-})
 
 client.login(discord_token);
