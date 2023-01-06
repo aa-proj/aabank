@@ -70,7 +70,7 @@ client.on('ready', async (c) => {
       // デバッグ用の環境変数が設定されていた時にcommandを前処理
       {
         body: SLASH_COMMAND.map(r => {
-          r.name = process.env.CMD_PREFIX + r.name;
+          r.name = (process.env.CMD_PREFIX || "")  + r.name;
           return r
         })
       },
