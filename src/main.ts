@@ -1,8 +1,8 @@
-import {BaseCommandInteraction, Interaction, Message} from "discord.js";
+import {BaseCommandInteraction, CommandInteraction, Interaction, Message} from "discord.js";
 import {Connection, ConnectionOptions, createConnection} from "typeorm";
 import {User} from "./entity/user";
 import {Transaction} from "./entity/transaction";
-import {userCheckInit} from "./lib";
+import {SEND_RESULT, sendAAP, userCheckInit} from "./lib";
 
 import "./api"
 import {AA_GUILD_ID, SLASH_COMMAND} from "./constant";
@@ -39,7 +39,6 @@ async function connectDB() {
 
 // コネクションする
 connectDB();
-
 
 
 const rest = new REST({version: '9'}).setToken(discord_token);
@@ -111,66 +110,30 @@ client.on('interactionCreate', async (interaction: Interaction) => {
     const fromUserId = interaction.user.id
     const amount = Number(interaction.options.get("amount")?.value) || 0
     const memo = interaction.options.get("memo")?.value + "" || ""
-    if (toUserId === "") {
-      await interaction.reply("エラー ますだくんにれんらくしてね (宛先ID null)")
-      return
-    }
-    if (toUserId === fromUserId) {
-      interaction.reply({
-        content: `自分には送金できません`,
-        fetchReply: true
-      }).then((r) => {
-        setTimeout(() => {
-          if ((r as Message).deletable) {
-            (r as Message).delete()
-          }
-        }, 10000)
-      })
-      return
-      return
-    }
-    const toUser = await userCheckInit(toUserId)
-    const fromUser = await userCheckInit(fromUserId)
-    if (!toUser || !fromUser) {
-      await interaction.reply("エラー ますだくんにれんらくしてね (send ユーザ初期化)")
-      return
-    }
-    if (amount <= 0) {
-      interaction.reply({
-        content: `0ああP以下の送金はできません`,
-        fetchReply: true
-      }).then((r) => {
-        setTimeout(() => {
-          if ((r as Message).deletable) {
-            (r as Message).delete()
-          }
-        }, 10000)
-      })
-      return
-    }
-    if (fromUser.amount < amount) {
-      interaction.reply({
-        content: `<@${fromUserId}> さんが <@${toUserId}> さんに ${amount} ああポイント送金しようとしましたが、おかねがたりませんでした　ﾌﾟﾌﾟﾌﾟ`,
-        fetchReply: true
-      }).then((r) => {
-        setTimeout(() => {
-          if ((r as Message).deletable) {
-            (r as Message).delete()
-          }
-        }, 10000)
-      })
-      return
-    }
 
-    fromUser.amount -= amount
-    toUser.amount += amount
-    await userRepository?.save(fromUser)
-    await userRepository?.save(toUser)
-    await interaction.reply(`<@${fromUserId}> さんが <@${toUserId}> さんに ${amount} ああポイント送金しました。`)
-    const transaction = await transactionRepository?.create({
-      fromUser, toUser, amount, timestamp: new Date(), memo
-    })
-    await transactionRepository?.save(<Transaction>transaction)
+    const transactionResult = await sendAAP(fromUserId, toUserId, amount, memo)
+    switch (transactionResult) {
+      case SEND_RESULT.FROM_TO_SAME:
+        interactionReplyAndDelete(interaction, "自分には送金できません", 10000)
+        break
+      case SEND_RESULT.USERID_IS_EMPTY:
+        await interaction.reply("エラー ますだくんにれんらくしてね (宛先ID null)")
+        break
+      case SEND_RESULT.INVALID_AMOUNT:
+        interactionReplyAndDelete(interaction, "0ああP以下の送金はできません", 10000)
+        break
+      case SEND_RESULT.NOT_ENOUGH_MONEY:
+        const nem = `<@${fromUserId}> さんが <@${toUserId}> さんに ${amount} ああポイント送金しようとしましたが、おかねがたりませんでした　ﾌﾟﾌﾟﾌﾟ`
+        interactionReplyAndDelete(interaction, nem, 10000)
+        break
+      case SEND_RESULT.UNKNOWN:
+        await interaction.reply("エラー ますだくんにれんらくしてね (send ユーザ初期化)")
+        break
+      case SEND_RESULT.SUCCESS:
+        const success = `<@${fromUserId}> さんが <@${toUserId}> さんに ${amount} ああポイント送金しました。`
+        await interaction.reply(success)
+        break
+    }
   }
 
   if (interaction.commandName === "transaction") {
@@ -226,5 +189,17 @@ async function getTransactionText(transaction: Transaction[] | null): Promise<st
   return tmp.join("\n")
 }
 
+function interactionReplyAndDelete(interaction: CommandInteraction, message: string, time: number) {
+  interaction.reply({
+    content: message,
+    fetchReply: true
+  }).then((r) => {
+    setTimeout(async () => {
+      if ((r as Message).deletable) {
+        await (r as Message).delete()
+      }
+    }, time)
+  })
+}
 
 client.login(discord_token);
