@@ -200,6 +200,23 @@ client.on('interactionCreate', async (interaction: Interaction) => {
         components: [action]
       })
     }
+
+    if (interaction.commandName === "earn") {
+      if(interaction.user.id !== "170731615524356097") {
+        await interaction.reply("ここあ以外このコマンドはうてません　ﾌﾟﾌﾟ")
+        return
+      }
+
+      const toUserId = interaction.options.get("user")?.user?.id || ""
+      const fromUserId = "885834421771567125"
+      const amount = Number(interaction.options.get("amount")?.value) || 0
+      await sendAAP(fromUserId, toUserId, amount, "admin send")
+      await interaction.reply("ok")
+      setTimeout(() => {
+        interaction.deleteReply()
+      }, 1000)
+    }
+
   } else if (interaction.isButton()) {
     const customId = interaction.customId
     const args = customId.split(":")

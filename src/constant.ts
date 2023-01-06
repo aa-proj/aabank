@@ -125,4 +125,22 @@ export const SLASH_COMMAND = [{
       }
     ]
   },
-  ];
+  {
+    name: "earn",
+    description: "earn aaP",
+    options: [
+      {
+        name: "user",
+        required: true,
+        description: "user",
+        type: 6
+      },
+      {
+        name: "amount",
+        required: true,
+        description: "量",
+        type: 4
+      },
+    ]
+  }
+];
