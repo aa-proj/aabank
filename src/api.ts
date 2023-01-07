@@ -3,8 +3,10 @@ import {User} from "./entity/user";
 import {client, connection} from "./main";
 import {SEND_RESULT, sendAAP, userCheckInit} from "./lib";
 import {Transaction} from "./entity/transaction";
+import cors from "cors"
 
 const app = express()
+app.use(cors())
 app.use(express.json())
 const server = app.listen(9989, function () {
   console.log("web server OK")
