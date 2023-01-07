@@ -262,16 +262,16 @@ client.on('interactionCreate', async (interaction: Interaction) => {
 });
 
 async function getNamefromID(id: any) {
-  let g = client.guilds.cache.get(AA_GUILD_ID);
-  const member = await g?.members.cache.get(id)
+  let g = await client.guilds.fetch(AA_GUILD_ID);
+  const member = await g.members.fetch(id)
   let nickName = member?.nickname?.replace("@", "＠");
   if (!nickName) nickName = member?.displayName;
   return nickName;
 }
 
 async function getTagFromId(id: any) {
-  let g = client.guilds.cache.get(AA_GUILD_ID);
-  const member = await g?.members.cache.get(id)
+  let g = await client.guilds.fetch(AA_GUILD_ID);
+  const member = await g.members.fetch(id)
   return member?.user.username + "#" + member?.user.discriminator;
 }
 
