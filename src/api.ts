@@ -2,6 +2,7 @@ import express from "express"
 import {User} from "./entity/user";
 import {client, connection} from "./main";
 import {SEND_RESULT, sendAAP, userCheckInit} from "./lib";
+import {Transaction} from "./entity/transaction";
 
 const app = express()
 app.use(express.json())
@@ -36,6 +37,46 @@ app.post("/", async function (req, res, next) {
       break
   }
 });
+
+
+app.get("/v2/transaction", async (req, res) => {
+  const transactionRepository = await connection?.getRepository(Transaction)
+  const allTransaction = await transactionRepository?.find({
+    relations: ["fromUser", "toUser"]
+  });
+  res.send(allTransaction)
+})
+
+app.get("/v2/transaction/:id", async (req, res) => {
+  const transactionRepository = await connection?.getRepository(Transaction)
+  const allTransaction = await transactionRepository?.find({
+      where: {
+        id: Number(req.params.id)
+      },
+      relations: ["fromUser", "toUser"]
+  });
+  res.send(allTransaction)
+})
+
+app.get("/v2/user", async (req, res) => {
+  const userRepository = await connection?.getRepository(User)
+  const allUsers = await userRepository?.find({
+    relations: ["sendTransaction", "receiveTransaction"]
+  })
+  res.send(allUsers)
+})
+
+app.get("/v2/user/:userId", async (req, res) => {
+  const userRepository = await connection?.getRepository(User)
+  const allUsers = await userRepository?.find({
+    where: {
+      discordId: req.params.userId
+    },
+    relations: ["sendTransaction", "receiveTransaction"]
+  })
+  res.send(allUsers)
+})
+
 
 app.get("/:id", async function (req, res, next) {
   const userRepository = await connection?.getRepository(User)
