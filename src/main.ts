@@ -161,6 +161,8 @@ client.on('interactionCreate', async (interaction: Interaction) => {
     }
 
     if (interaction.commandName === "rank") {
+      const i = await interaction.deferReply()
+
       const users = (await userRepository?.find())?.sort((a, b) => {
         return (a.amount < b.amount) ? 1 : -1
       })
@@ -169,8 +171,8 @@ client.on('interactionCreate', async (interaction: Interaction) => {
         reply.push(`${await getNamefromID(u.discordId)}: ${u.amount}ああP `)
       }
       // console.log(reply)
-      await interaction.reply(`\`\`\`${reply.join("\n")}\`\`\``)
-      setTimeout(() => interaction.deleteReply(), 10000)
+      await i.edit(`\`\`\`${reply.join("\n")}\`\`\``)
+      // setTimeout(() => interaction.deleteReply(), 10000)
     }
 
     if (interaction.commandName === "harae" || interaction.commandName === "seikyu" || interaction.commandName === "request") {
