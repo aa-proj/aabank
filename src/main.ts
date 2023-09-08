@@ -181,7 +181,7 @@ client.on('interactionCreate', async (interaction: Interaction) => {
       const memo = interaction.options.get("memo")?.value || ""
 
       await interaction.reply({
-        content: `<@${fromUserId}> さんが <@${toUserId}> さんに ${amount} ああポイント請求しました。`,
+        content: `<@${toUserId}>さんが <@${fromUserId}> さんに ${amount} ああポイント請求しました。`,
       })
       const message = await interaction.fetchReply()
 
