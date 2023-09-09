@@ -70,7 +70,7 @@ client.on('ready', async (c) => {
       // デバッグ用の環境変数が設定されていた時にcommandを前処理
       {
         body: SLASH_COMMAND.map(r => {
-          r.name = (process.env.CMD_PREFIX || "")  + r.name;
+          r.name = (process.env.CMD_PREFIX || "") + r.name;
           return r
         })
       },
@@ -163,12 +163,29 @@ client.on('interactionCreate', async (interaction: Interaction) => {
     if (interaction.commandName === "rank") {
       const i = await interaction.deferReply()
 
-      const users = (await userRepository?.find())?.sort((a, b) => {
+      const users = (await userRepository?.find({relations: ["sendTransaction", "receiveTransaction"]}))?.sort((a, b) => {
         return (a.amount < b.amount) ? 1 : -1
       })
       let reply = []
       for (const u of users || []) {
-        reply.push(`${await getNamefromID(u.discordId)}: ${u.amount}ああP `)
+        // calc transaction sum at one day
+        let sum = 0
+        for (const t of u.sendTransaction || []) {
+          if (t.timestamp.getTime() > Date.now() - 86400000) {
+            sum -= t.amount || 0
+          }
+        }
+        for (const t of u.receiveTransaction || []) {
+          if (t.timestamp.getTime() > Date.now() - 86400000) {
+            sum += t.amount || 0
+          }
+        }
+        if (sum === 0) {
+          reply.push(`${spaceTextWidth(await getNamefromID(u.discordId), 15)}: ${u.amount}ああP `)
+        } else {
+          reply.push(`${spaceTextWidth(await getNamefromID(u.discordId), 15)}: ${spaceTextWidth(u.amount + "ああP", 10)} 前日比 ${sum > 0 ? "+" : ""}${sum}`)
+        }
+
       }
       // console.log(reply)
       await i.edit(`\`\`\`${reply.join("\n")}\`\`\``)
@@ -204,7 +221,7 @@ client.on('interactionCreate', async (interaction: Interaction) => {
     }
 
     if (interaction.commandName === "earn") {
-      if(interaction.user.id !== "170731615524356097") {
+      if (interaction.user.id !== "170731615524356097") {
         await interaction.reply("ここあ以外このコマンドはうてません　ﾌﾟﾌﾟ")
         return
       }
@@ -262,6 +279,22 @@ client.on('interactionCreate', async (interaction: Interaction) => {
     }
   }
 });
+
+
+function spaceTextWidth(text: string, space: number) {
+  //when japanese text is included, it is counted as 2
+  let textWidth = 0;
+  for (let i = 0; i < text.length; i++) {
+    let c = text.charCodeAt(i);
+    if ((c >= 0x0 && c < 0x81) || c === 0xf8f0 || (c >= 0xff61 && c < 0xffa0) || (c >= 0xf8f1 && c < 0xf8f4)) {
+      textWidth += 1;
+    } else {
+      textWidth += 2;
+    }
+  }
+  const spaceText = " ".repeat((space - textWidth) > 0 ? (space - textWidth) : 0)
+  return text + spaceText
+}
 
 async function getNamefromID(id: any) {
   try {
