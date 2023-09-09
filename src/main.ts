@@ -214,7 +214,7 @@ client.on('interactionCreate', async (interaction: Interaction) => {
           ]
         );
       await interaction.editReply({
-        content: `<@${fromUserId}> さんが <@${toUserId}> さんに ${amount} ああポイント請求しました。`,
+        content: ` <@${toUserId}> さんが <@${fromUserId}> さんに ${amount} ああポイント請求しました。`,
         // @ts-ignore
         components: [action]
       })
@@ -269,7 +269,7 @@ client.on('interactionCreate', async (interaction: Interaction) => {
           const message = await channel?.messages.fetch(messageId)
           if (message?.editable) {
             await message.edit({
-              content: `<@${fromId}> さんが <@${toId}> さんに ${amount} ああポイント請求しました。(支払い済み)`,
+              content: ` <@${toId}> さんが <@${fromId}> さんに ${amount} ああポイント請求しました。(支払い済み)`,
               components: []
             })
           }
